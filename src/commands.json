@@ -1,0 +1,17 @@
+[
+	{
+		commandName: "Hello",
+		commandWords: ["computer", "hello" ],
+		scriptPath: "./src/exampleScripts/hello.bat"
+	},
+	{
+		commandName: "Start Notepad",
+		commandWords: ["computer", "start", "note" ],
+		scriptPath: "./src/exampleScripts/notepad.bat"
+	},
+	{
+		commandName: "Start Calc",
+		commandWords: ["computer", "start", "calculator"],
+		scriptPath: "./src/exampleScripts/calc.bat"
+	}
+]

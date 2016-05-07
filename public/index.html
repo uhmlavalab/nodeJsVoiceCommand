@@ -1,35 +1,141 @@
 <!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<link rel="icon" href="favicon.ico">
-		<title>Main Page</title>
-	</head>
-	<!-- ============================================================================================================================================= Body -->
-	<body>
+<html>
+<head>
+  <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+  <link rel="icon" href="favicon.ico">
+  <title>Voice Commands</title>
+  <style>
+    body {
+      font-family: Helvetica, Arial, sans-serif;
+    }
+    .outputInter {
+      border: 1px solid red;
+      height: "20px";
+    }
+    .outputFinal {
+      border: 1px solid green;
+      height: "20px";
+    }
+  </style>
+</head>
+
+<body>
+  <div>
+    <button onclick="toggleVoiceRecognition()">Start/Stop</button>
+  </div>
+  <div id="infoDiv">Inactive</div>
+
+  <span class="outputFinal" id="final_div">Final Div</span>
+  <span class="outputInter" id="interim_div">Interim Div</span>
+
+  <br><br>
+  <hr>
+  <div>
+    Log:
+    <br>
+    <div id="logEntries">
+    </div>
+  </div>
+</body>
 
 
-		<h1> Hello World </h1>
+<script type="text/javascript" src="src/websocket.io.js"></script>
+<script type="text/javascript" src="src/mod-wsio.js"></script>
+
+<script type="text/javascript">
+
+// Setup websocket connection
+initializeWS();
 
 
-		<div id='sendDiv'>
+// Setup the speech recognition values
 
-			<input type="text" id="inbox" size="40">
-			<button id="ibSend" onclick="sendInbox()">Send</button>
+var debug = true;
+var recognizing = false;
+var final_transcript = " ";
+var interim_transcript = " ";
 
-		</div>
+if (!("webkitSpeechRecognition" in window)) {
+  alert("Sorry your browser doesn't support webkitSpeechRecognition. You will need an updated chrome");
+}
+else {
+  cprint("webkitSpeechRecognition exists beginning setup");
+  var recognition = new webkitSpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  recognition.onstart = function() {
+    cprint("onstart");
+    recognizing = true;
+  }
+
+  recognition.onresult = function(event) {
+    cprint("onresult");
+    interim_transcript = " ";
+    for (var i = event.resultIndex; i < event.results.length; ++i) {
+      if (event.results[i].isFinal) {
+        final_transcript = event.results[i][0].transcript;
+      } else {
+        interim_transcript += event.results[i][0].transcript;
+      }
+    }
+
+    dealWithText();
+  } //end onresult
+
+  recognition.onerror = function() {
+    cprint("onerror");
+  }
+
+  recognition.onend = function() {
+    cprint("onend");
+    recognizing = false;
+  }
+
+} //end else there is webki
+
+function dealWithText() {
+    final_transcript = capitalize(final_transcript);
+    final_div.innerHTML = linebreak(final_transcript);
+    interim_div.innerHTML = linebreak(interim_transcript);
+
+    if (final_transcript.length > 2) {
+      logEntries.innerHTML += "\n<br>Speech Detected and finalized: " + final_transcript;
+
+      wsio.emit("evaluateCommand", {message:final_transcript});
+
+      final_transcript = " ";
+    }
+}
+
+function toggleVoiceRecognition() {
+  if (recognizing) {
+    recognition.stop();
+    document.getElementById("infoDiv").innerHTML = "Inactive";
+    return;
+  }
+  final_transcript = " ";
+  recognition.lang = "en-US";
+  recognition.start();
+  document.getElementById("infoDiv").innerHTML = "Active";
+  final_div.innerHTML = "Starting...";
+  interim_div.innerHTML = "Starting...";
+}
+
+var one_line = /\n/g;
+var two_line = /\n\n/g;
+function linebreak(s) {
+  return s.replace(two_line, "<p></p>").replace(one_line, "<br>");
+}
+
+function capitalize(s) {
+  return s.toUpperCase();
+}
+
+function cprint( msg, debug) {
+  console.log(msg);
+}
+
+</script>
 
 
-		<div id='serverResponse'> </div>
-
-
-
-		<!-- JavaScript references placed at the end of the document so the pages load faster -->
-		<script type="text/javascript" src="src/websocket.io.js"></script>
-		<script type="text/javascript" src="src/index-wsio.js"></script>
-		<script type="text/javascript">
-			initializeWS();
-		</script>
-
-	</body>
-</html>

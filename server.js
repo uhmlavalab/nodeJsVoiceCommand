@@ -8,6 +8,7 @@ var WebSocketIO		= require("websocketio");
 var httpServer   	= require("./src/httpServer");
 var utils			= require("./src/utils");
 var gcSetup 		= require("./src/globalsAndConstants");
+var vcHandler       = require("./src/voiceCommand")
 
 //---------------------------------------------------------------------------WebServer variables
 var webVars			= {};
@@ -21,6 +22,9 @@ var clientData		= []; //any additional data as necessary for clients.
 
 //---------------------------------------------------------------------------debug options setup
 gcSetup.initialize(); //check the file for specific debug options.
+
+// Load commands
+vcHandler.initialize();
 
 //--------------------------------------------------------------------------------------------------------------------------Start webserver
 //create http listener
@@ -107,32 +111,25 @@ function wsAddClient(wsio, data) {
 When receiving a packet of the named type, call the function.
 */
 function setupListeners(wsio) {
-	wsio.on("consoleLog",				wsConsoleLog); //basic tester packet
-	wsio.on("launchCommand",			wsLaunchCommand);
-	wsio.on("stopCommand", 				wsStopCommand);
-	wsio.on("helloCommand", 			wsHelloCommand);
-} //end setupListeners
+	wsio.on("consoleLog",				wsConsoleLog); // basic tester packet
+	wsio.on("evaluateCommand", 			wsEvaluateCommand); // 
+} // end setupListeners
 
 function wsConsoleLog(wsio, data) {
-	utils.consolePrint(data.message); //assumes there is a message property in the packet.
+	utils.consolePrint(data.message); // assumes there is a message property in the packet.
 	data.message = "Server confirms:" + data.message;
 	wsio.emit("serverConfirm", data);
 }
 
-function wsLaunchCommand(wsio, data) {
-	utils.consolePrint("launchCommand received");
-	wsio.emit("serverConfirm", {message: "Received launchCommand"});
-	script("C:\\Users\\LavaLab\\Documents\\SAGE2_Media\\sabiConfig\\scripts\\s2_remoteOneMon.bat");
-}
+function wsEvaluateCommand(wsio, data) {
+	utils.debugPrint("evaluateCommand packet received from:" + wsio.id, "wsio");
+	utils.debugPrint("contents:" + data.message, "wsio");
 
-function wsStopCommand(wsio, data) {
-	utils.consolePrint("stopCommand received");
-	wsio.emit("serverConfirm", {message: "Received stopCommand"});
-	script("C:\\Users\\LavaLab\\Documents\\SAGE2_Media\\sabiConfig\\scripts\\sage2_off.bat");
-}
-
-function wsHelloCommand(wsio, data) {
-	utils.consolePrint("helloCommand received");
-	wsio.emit("serverConfirm", {message: "Received helloCommand"});
-	script("C:\\Users\\LavaLab\\Documents\\SAGE2_Media\\sabiConfig\\scripts\\hello.bat");
-}
+	var result = vcHandler.handleCommandString(data.message);
+	if (result === false) {
+		wsio.emit("serverConfirm", {message:"UNKNOWN COMMAND"});
+	} else {
+		wsio.emit("serverConfirm", {message:("COMMAND " + result.commandName + " accepted.") })
+		script(result.path);
+	}
+} // End wsEvaluateCommand
